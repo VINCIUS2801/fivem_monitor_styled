@@ -1,0 +1,98 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Monitor de Jogadores - FiveM</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background-color: #1e1e1e; color: #fff; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; background-color: #2c2c2c; }
+    th, td { padding: 8px; border: 1px solid #444; text-align: left; }
+    input, select { margin: 5px; padding: 5px; background: #333; border: 1px solid #555; color: #fff; }
+    button { padding: 6px 12px; background: #007acc; border: none; color: white; cursor: pointer; }
+    .online { color: #00ff00; font-weight: bold; }
+    .offline { color: #ff4444; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Verificar Jogadores Online - FiveM</h1>
+
+  <label>Nome in-game: <input type="text" id="nome"></label>
+  <label>Apelido: <input type="text" id="apelido"></label>
+  <label>Gangue: <input type="text" id="gangue"></label>
+  <button onclick="adicionarJogador()">Adicionar</button>
+
+  <label for="filtroGangue">Filtrar por gangue:</label>
+  <select id="filtroGangue" onchange="verificarOnline()">
+    <option value="">Todas</option>
+  </select>
+
+  <table id="tabela">
+    <thead>
+      <tr>
+        <th>Apelido</th>
+        <th>Nome in-game</th>
+        <th>Gangue</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    let lista = [];
+
+    function adicionarJogador() {
+      const nome = document.getElementById("nome").value.trim();
+      const apelido = document.getElementById("apelido").value.trim();
+      const gangue = document.getElementById("gangue").value.trim();
+      if (!nome || !apelido || !gangue) return;
+
+      lista.push({ nome, apelido, gangue });
+      atualizarFiltroGangue();
+      verificarOnline();
+    }
+
+    function atualizarFiltroGangue() {
+      const gangues = [...new Set(lista.map(j => j.gangue))];
+      const filtro = document.getElementById("filtroGangue");
+      filtro.innerHTML = '<option value="">Todas</option>';
+      gangues.forEach(g => {
+        filtro.innerHTML += `<option value="${g}">${g}</option>`;
+      });
+    }
+
+    async function verificarOnline() {
+      try {
+        const resposta = await fetch("https://servers-frontend.fivem.net/api/servers/single/byzd3d");
+        const dados = await resposta.json();
+        const onlinePlayers = dados?.Data?.players || [];
+        const filtroSelecionado = document.getElementById("filtroGangue").value;
+
+        const tabela = document.querySelector("#tabela tbody");
+        tabela.innerHTML = "";
+
+        for (const jogador of lista) {
+          if (filtroSelecionado && jogador.gangue !== filtroSelecionado) continue;
+
+          const estaOnline = onlinePlayers.some(p => p.name.toLowerCase() === jogador.nome.toLowerCase());
+          const status = estaOnline ? `<span class="online">Online</span>` : `<span class="offline">Offline</span>`;
+
+          tabela.innerHTML += `
+            <tr>
+              <td>${jogador.apelido}</td>
+              <td>${jogador.nome}</td>
+              <td>${jogador.gangue}</td>
+              <td>${status}</td>
+            </tr>
+          `;
+        }
+      } catch (e) {
+        alert("Erro ao buscar dados do servidor. Verifique sua conexão.");
+      }
+    }
+
+    setInterval(verificarOnline, 30000);
+  </script>
+</body>
+</html>
